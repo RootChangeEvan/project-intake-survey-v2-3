@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Intake — Survey Prototype</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+:root{
+  --bg:#F7F1E4;--paper:#FFFDF7;--panel:#FFFDF7;--panel2:#FBF6EA;--soft:#F3ECDC;--line:#E0D5BC;
+  --ink:#3A3428;--strong:#241F14;--muted:#6E6553;--faint:#9A9280;
+  --teal:#0F6E56;--teal-ink:#FFFFFF;--bridge:#C2410C;--amber:#B45309;--plum:#5B4E9C;
+  --radius:14px;--shadow:0 6px 22px rgba(96,74,38,.14);
+  --sans:"Segoe UI","Trebuchet MS",Arial,Helvetica,sans-serif;
+}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{background:radial-gradient(1100px 560px at 85% -10%,rgba(15,110,86,.05),transparent 60%),
+  radial-gradient(900px 500px at -10% 110%,rgba(194,65,12,.05),transparent 55%),var(--bg);
+  color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px 70px}
+.pretend{background:repeating-linear-gradient(45deg,#F5E4B5 0 14px,#EFD897 14px 28px);
+  border:1px solid #C9A94E;border-radius:10px;color:#6B4A00;font-weight:700;font-size:13.5px;
+  padding:10px 16px;margin:16px 0;text-align:center}
+header.app{padding:18px 22px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:18px}
+header.app h1{margin:0 0 4px;font-size:21px;color:var(--strong)}
+header.app p{margin:0;color:var(--muted);font-size:13.5px;max-width:70ch}
+
+.block{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin:18px 0}
+.app-shell .block:first-child{margin-top:0}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--teal);font-weight:700;margin-bottom:6px}
+h2{margin:0 0 8px;font-size:19px;color:var(--strong)}
+h3{margin:0 0 8px;font-size:14px;color:var(--strong)}
+.lede{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0 0 16px;max-width:70ch}
+.intro-list{padding-left:20px;margin-top:0}
+.intro-list li{margin-bottom:4px}
+label.field-label{display:block;font-size:12.5px;font-weight:700;color:var(--strong);margin:18px 0 6px}
+label.field-label:first-of-type{margin-top:0}
+.field-hint{font-size:11.5px;color:var(--faint);margin:2px 0 8px;font-weight:400}
+.field-warning{font-size:13px;color:var(--amber);background:#FFF7ED;border:1px solid var(--amber);border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.5}
+input[type=text], textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px}
+textarea{resize:vertical;min-height:70px}
+input[type=text]:focus, textarea:focus{outline:2px solid var(--teal);border-color:var(--teal)}
+.btn{appearance:none;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13.5px;border-radius:10px;
+  padding:10px 18px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--teal);background:var(--teal);color:var(--teal-ink);transition:.15s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--teal);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--teal)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+/* ── app shell: step nav + content + live map ── */
+.app-shell{display:grid;grid-template-columns:200px minmax(0,1fr) 360px;gap:16px;align-items:start}
+.step-nav{display:flex;flex-direction:column;gap:4px;position:sticky;top:16px}
+.step-nav button{appearance:none;cursor:pointer;text-align:left;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--muted);
+  display:flex;align-items:center;gap:8px;min-height:44px}
+.step-nav button .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.step-nav button.done .dot{background:var(--teal)}
+.step-nav button.current{background:var(--teal);color:var(--teal-ink);border-color:var(--teal)}
+.step-nav button.current .dot{background:#fff}
+.main-col{min-width:0}
+.side-col{position:sticky;top:16px}
+
+/* ── category chips (step 1) ── */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.pick-chip{border:1.5px solid var(--line);border-radius:999px;padding:9px 14px;min-height:40px;font-size:12.5px;
+  cursor:pointer;background:#fff;color:var(--ink);font-weight:600;transition:.15s;display:inline-flex;align-items:center}
+.pick-chip.on{color:#fff;border-color:transparent}
+
+/* ── budget ── */
+.budget-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.budget-chip{border:1.5px solid var(--line);border-radius:10px;padding:12px 16px;min-height:44px;font-size:13px;
+  cursor:pointer;background:#fff;color:var(--ink);font-weight:600;transition:.15s;flex:1 1 130px;text-align:center}
+.budget-chip.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.toggle-row{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:10px 12px;background:var(--soft);
+  border-radius:10px}
+.toggle-row input{width:18px;height:18px;margin-top:2px;flex:none}
+.toggle-row label{font-size:12.5px;color:var(--ink);font-weight:600}
+.toggle-note{font-size:11px;color:var(--faint);margin-top:4px}
+
+/* ── what the project will need (step 2) ── */
+.need-cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:10px}
+.need-cat{border:1.5px solid var(--line);border-left:5px solid var(--cat);border-radius:10px;padding:10px 12px;
+  background:#fff;cursor:pointer;min-height:44px;transition:.15s;user-select:none}
+.need-cat:hover{border-color:var(--cat)}
+.need-cat .nc-name{font-weight:700;font-size:13.5px;color:var(--strong);display:flex;align-items:center;gap:8px}
+.need-cat .nc-box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line);flex:none;background:#fff;position:relative}
+.need-cat.on .nc-box{background:var(--cat);border-color:var(--cat)}
+.need-cat.on .nc-box::after{content:"";position:absolute;left:4px;top:0;width:5px;height:10px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg)}
+.need-cat .nc-blurb{font-size:11.5px;color:var(--muted);margin-top:3px}
+.need-cat.on{background:var(--soft)}
+
+/* ── what's in the way (step 4) ── */
+.blocker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.blocker{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;
+  min-height:44px;transition:.15s;user-select:none}
+.blocker:hover{border-color:var(--teal)}
+.blocker .b-name{font-weight:700;font-size:13px;color:var(--strong)}
+.blocker .b-hint{font-size:11.5px;color:var(--muted);margin-top:2px}
+.blocker.on{background:var(--teal);border-color:var(--teal)}
+.blocker.on .b-name,.blocker.on .b-hint{color:#fff}
+
+/* ── who's around it: deliberate list builder ── */
+.add-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:relative}
+.add-row input{flex:1 1 220px}
+.suggest-list{position:absolute;top:calc(100% + 4px);left:0;width:min(100%,360px);max-height:240px;
+  overflow-y:auto;background:var(--paper);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);z-index:20}
+.suggest-item{padding:12px;min-height:44px;font-size:13px;color:var(--ink);cursor:pointer;display:flex;
+  align-items:center;justify-content:space-between;gap:8px}
+.suggest-item:hover{background:var(--soft)}
+.suggest-item:not(:last-child){border-bottom:1px solid var(--line)}
+.suggest-sub{font-size:11px;color:var(--faint)}
+.status-pick{display:flex;gap:8px;margin:4px 0 14px;flex-wrap:wrap}
+.status-btn{border:1.5px solid var(--line);border-radius:999px;padding:9px 14px;min-height:40px;font-size:12.5px;
+  cursor:pointer;background:#fff;color:var(--ink);font-weight:700;transition:.15s}
+.status-btn[data-status="committed"].on{background:var(--teal);border-color:var(--teal);color:#fff}
+.status-btn[data-status="consulted"].on{background:var(--amber);border-color:var(--amber);color:#fff}
+.status-btn[data-status="met"].on{background:var(--faint);border-color:var(--faint);color:#fff}
+.connected-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.connected-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--paper);
+  border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;flex-wrap:wrap}
+.connected-row .nm{font-weight:700;color:var(--strong)}
+.connected-row .sub{font-size:11px;color:var(--faint)}
+.status-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-radius:5px;
+  padding:2px 7px;color:#fff;flex:none}
+.status-tag.committed{background:var(--teal)}
+.status-tag.consulted{background:var(--amber)}
+.status-tag.met{background:var(--faint)}
+.confirm-tag{font-size:10px;font-weight:700;letter-spacing:.3px;border-radius:5px;padding:1px 7px;flex:none;
+  border:1px dashed var(--faint);color:var(--muted);background:#fff}
+.confirm-tag.ok{border-style:solid;border-color:var(--teal);color:var(--teal)}
+.demo-confirm{appearance:none;cursor:pointer;background:none;border:none;color:var(--teal);font-family:var(--sans);
+  font-size:11px;text-decoration:underline;padding:6px 4px;min-height:32px}
+.row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row-remove{appearance:none;cursor:pointer;background:transparent;border:none;color:var(--faint);font-size:16px;
+  min-width:36px;min-height:36px;border-radius:8px}
+.row-remove:hover{color:var(--bridge);background:var(--soft)}
+.empty-note{color:var(--faint);font-size:12.5px;padding:10px 0}
+
+/* ── live map panel ── */
+.live-map-panel{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;position:relative}
+.live-map-panel h3{margin-bottom:2px}
+.live-map-sub{font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.live-map-wrap{position:relative;background:var(--paper);border:1px dashed var(--line);border-radius:12px;
+  overflow:hidden;height:280px}
+#liveMapSvg{display:block;width:100%;height:100%}
+.live-map-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--faint);font-size:12.5px;padding:20px}
+.live-map-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:11px;color:var(--muted)}
+.live-map-legend .lg{display:flex;align-items:center;gap:5px}
+.readout{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.readout-title{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--faint);font-weight:700}
+.ro-row{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--ink);line-height:1.45}
+.ro-k{flex:none;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-radius:5px;
+  padding:3px 0;color:#fff;width:96px;text-align:center;margin-top:1px}
+.ro-k.strong{background:var(--teal)}
+.ro-k.tentative{background:var(--amber)}
+.ro-k.confirmed{background:var(--faint)}
+.ro-k.missing{background:var(--bridge)}
+.ro-k.premature{background:var(--plum)}
+.ro-k.next{background:var(--strong)}
+.ro-empty{font-size:12px;color:var(--faint)}
+
+/* ── review ── */
+.review-h{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--teal);font-weight:700;margin:20px 0 8px}
+.review-h:first-of-type{margin-top:4px}
+.review-summary{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+.review-field{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;
+  justify-content:space-between;gap:12px;align-items:flex-start}
+.review-field .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);font-weight:700}
+.review-field .v{font-size:13.5px;color:var(--ink);margin-top:2px}
+.edit-link{appearance:none;cursor:pointer;background:none;border:none;color:var(--teal);font-family:var(--sans);
+  font-size:12px;text-decoration:underline;padding:4px;flex:none;min-height:32px}
+.next-panel{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:12px;
+  padding:16px 18px;margin:0 0 6px}
+.next-panel.first{border-left-color:var(--plum)}
+.next-panel.unsure{border-left-color:var(--faint)}
+.next-panel h3{margin:0 0 6px;font-size:15px}
+.next-panel p{margin:0 0 10px;font-size:13.5px;color:var(--ink);line-height:1.6}
+.settle-list{margin:0 0 10px;padding-left:18px;font-size:13.5px;line-height:1.55}
+.settle-list li{margin-bottom:6px}
+.next-panel .later{font-size:13px;color:var(--ink);background:var(--soft);border-radius:8px;padding:8px 10px;margin:10px 0 0}
+.next-panel .along{font-size:12.5px;color:var(--muted);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.match-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px}
+.match-card .m-name{font-size:13.5px;font-weight:700;color:var(--strong)}
+.match-card .m-sub{font-size:11.5px;color:var(--faint)}
+.match-card .m-why{font-size:12.5px;color:var(--muted);margin-top:2px}
+.payload-toggle{appearance:none;cursor:pointer;background:transparent;border:none;color:var(--teal);
+  font-family:var(--sans);font-size:12px;text-decoration:underline;padding:6px 0}
+pre.payload{background:#1f2b26;color:#c9e8dd;border-radius:10px;padding:12px;font-size:11px;overflow-x:auto;
+  display:none;margin-top:8px;line-height:1.5}
+.note{font-size:12px;color:var(--faint);font-style:italic;margin-top:12px}
+.sync-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--teal);
+  background:rgba(15,110,86,.1);border-radius:999px;padding:4px 10px;margin-top:10px}
+.sync-badge .sd{width:7px;height:7px;border-radius:50%;background:var(--teal)}
+
+@media (max-width:900px){
+  .app-shell{display:block}
+  .step-nav{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;gap:6px}
+  .step-nav button{flex:none;white-space:nowrap}
+  .side-col{position:static;margin-top:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="pretend">Demo version. The people and groups listed are pretend, and nothing you enter is saved.</div>
+
+<header class="app">
+  <h1 id="headerTitle">Tell us what you're starting</h1>
+  <p id="headerText"></p>
+</header>
+
+<div class="block" id="introBlock">
+  <div class="eyebrow">Before you start</div>
+  <h2>Tell us what you're starting</h2>
+  <p class="lede">This can be a project, a plan, or an idea you're working on with other people or groups. It doesn't need a name or a budget yet.</p>
+  <p class="lede">There are about a dozen questions in four short steps: what you're trying to do, what resources you have, who is involved and how, and what is stopping the next step. Rough answers are fine, and you can change anything before you submit.</p>
+  <p class="lede" style="margin-bottom:6px">When you submit, you get a page for your project. It shows:</p>
+  <ul class="lede intro-list">
+    <li>who has committed, who you've consulted, and which of them have confirmed;</li>
+    <li>the next step, and whether the exchange can help with it;</li>
+    <li>people and groups on the exchange who could help, and who you already know who can introduce you.</li>
+  </ul>
+  <p class="lede">Sometimes the next step isn't a new contact. It may be a decision, an approval, or agreement from neighbors. When that's the case, the page says so, and a facilitator can help you work through it.</p>
+  <p class="lede">Only you and the exchange's facilitators can see your project page. People you name who are on the exchange are asked to confirm, and they decide whether to. Your budget is visible only to facilitators unless you choose otherwise.</p>
+  <button class="btn" onclick="startSurvey()">Start →</button>
+</div>
+
+<div class="app-shell" id="appShell" style="display:none">
+  <nav class="step-nav" id="stepNav"></nav>
+
+  <div class="main-col">
+    <div class="block" id="stepProject">
+      <div class="eyebrow">Step 1 of 4</div>
+      <h2>The project</h2>
+      <p class="lede">What are you trying to start or keep going?</p>
+      <label class="field-label" for="projName">Name</label>
+      <div class="field-hint">A working name is fine, like "the van idea."</div>
+      <input type="text" id="projName" placeholder="e.g. Millbrook Farm-to-School Van" oninput="onProjectChange()">
+      <label class="field-label" for="projDesc">What you're trying to do</label>
+      <div class="field-hint">One or two sentences.</div>
+      <textarea id="projDesc" placeholder="e.g. Get a reliable van running so the farm co-op can deliver produce boxes to the two elementary schools each week." oninput="onProjectChange()"></textarea>
+      <label class="field-label">Which areas does it involve?</label>
+      <div class="field-hint">Pick as many as apply.</div>
+      <div class="chip-row" id="projCatChips"></div>
+      <label class="field-label" for="projGeo">Which towns or areas?</label>
+      <input type="text" id="projGeo" placeholder="e.g. Millbrook and Alderton" oninput="onProjectChange()">
+      <div class="btn-row">
+        <button class="btn" onclick="goStep('resources')">Continue →</button>
+      </div>
+    </div>
+
+    <div class="block" id="stepResources" style="display:none">
+      <div class="eyebrow">Step 2 of 4</div>
+      <h2>Resources</h2>
+      <p class="lede">What you have now, and what you expect to need. Estimates are fine.</p>
+      <label class="field-label">Money you have or have been promised</label>
+      <div class="budget-row" id="budgetChips"></div>
+      <div class="toggle-row">
+        <input type="checkbox" id="budgetPrivate" checked onchange="onResourcesChange()">
+        <div>
+          <label for="budgetPrivate">Only facilitators can see this amount</label>
+          <div class="toggle-note">Untick to let other members of the exchange see it too.</div>
+        </div>
+      </div>
+      <label class="field-label" for="inKind">Help already promised, other than money</label>
+      <div class="field-hint">For example space, equipment, volunteer time, or a donated van.</div>
+      <textarea id="inKind" placeholder="e.g. The church has offered its parking lot for pickup, and two volunteers can drive." oninput="onResourcesChange()"></textarea>
+      <label class="field-label">What will it need over time?</label>
+      <div class="field-hint">Not just for the next step. Pick any that apply. Step 4 asks what is stopping the next step.</div>
+      <div class="need-cat-grid" id="needCats"></div>
+      <label class="field-label" for="needsDetail">Anything specific? <span style="font-weight:400;color:var(--faint)">(optional)</span></label>
+      <input type="text" id="needsDetail" maxlength="200" placeholder="e.g. A second driver, and someone who knows school district rules" oninput="onResourcesChange()">
+      <div class="btn-row">
+        <button class="btn ghost" onclick="goStep('project')">← Back</button>
+        <button class="btn" onclick="goStep('people')">Continue →</button>
+      </div>
+    </div>
+
+    <div class="block" id="stepPeople" style="display:none">
+      <div class="eyebrow">Step 3 of 4</div>
+      <h2>Who's involved</h2>
+      <p class="lede" style="margin-bottom:6px">Add each person or group involved, one at a time, and mark where things stand:</p>
+      <ul class="lede intro-list">
+        <li><b>Committed:</b> they have agreed to take part.</li>
+        <li><b>Consulted:</b> you've talked about it, but they haven't agreed to take part.</li>
+        <li><b>Met:</b> you know them, but haven't talked about this yet.</li>
+      </ul>
+      <p class="lede">People on the exchange are asked to confirm what you entered. Until they do, they show as <b>not yet confirmed</b>. That isn't a judgment; it shows which relationships both sides agree on.</p>
+      <div class="add-row">
+        <input type="text" id="personName" placeholder="Type a name, then pick from the list or press Enter" autocomplete="off"
+          oninput="filterPersonSuggestions(this.value)" onfocus="filterPersonSuggestions(this.value)"
+          onblur="setTimeout(hidePersonSuggestions,150)"
+          onkeydown="if(event.key==='Enter'){ event.preventDefault(); stagePerson(this.value); }">
+        <div class="suggest-list" id="personSuggestions" style="display:none"></div>
+      </div>
+      <div id="statusPickWrap" style="display:none">
+        <div class="field-hint">Where do things stand with them?</div>
+        <div class="status-pick" id="statusPick">
+          <button type="button" class="status-btn" data-status="committed" onclick="pickStatus('committed')">Committed</button>
+          <button type="button" class="status-btn" data-status="consulted" onclick="pickStatus('consulted')">Consulted</button>
+          <button type="button" class="status-btn" data-status="met" onclick="pickStatus('met')">Met</button>
+        </div>
+      </div>
+      <div class="connected-list" id="connectedList"></div>
+      <div class="field-warning" id="peopleWarning" style="display:none"></div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="goStep('resources')">← Back</button>
+        <button class="btn" onclick="goStep('questions')">Continue →</button>
+      </div>
+    </div>
+
+    <div class="block" id="stepQuestions" style="display:none">
+      <div class="eyebrow">Step 4 of 4</div>
+      <h2>What's stopping the next step</h2>
+      <p class="lede">A project can have the right people and resources and still be stuck. These questions are about what is stopping the next step.</p>
+      <label class="field-label" for="qUnknown">What's the biggest unknown right now?</label>
+      <textarea id="qUnknown" placeholder="e.g. We don't know yet if the school district will let an outside van make deliveries on campus." oninput="onQuestionsChange()"></textarea>
+      <label class="field-label" for="qNeedTrue">What would need to be true for this to move forward?</label>
+      <textarea id="qNeedTrue" placeholder="e.g. A yes from the district, and one more driver so it's not just the two we have now." oninput="onQuestionsChange()"></textarea>
+      <label class="field-label">What is stopping the next step?</label>
+      <div class="field-hint">Pick any that apply.</div>
+      <div class="blocker-grid" id="blockerGrid"></div>
+      <div id="holderWrap" style="display:none">
+        <label class="field-label" for="qHolder">Who needs to agree or decide, if you know? <span style="font-weight:400;color:var(--faint)">(optional)</span></label>
+        <input type="text" id="qHolder" placeholder="e.g. The district's transportation office" oninput="onQuestionsChange()">
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="goStep('people')">← Back</button>
+        <button class="btn" onclick="goStep('review')">Continue to review →</button>
+      </div>
+    </div>
+
+    <div class="block" id="stepReview" style="display:none">
+      <div class="eyebrow">Review</div>
+      <div class="review-h">Your answers</div>
+      <div class="review-summary" id="reviewSummary"></div>
+      <div class="review-h">The next step</div>
+      <div id="nextPanel"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="submitProject()" id="submitBtn">Submit and create your project page →</button>
+      </div>
+      <div id="submitAfter"></div>
+      <!-- Builder-only: add ?debug to the page address to see the record this would save. Hidden from participants. -->
+      <button type="button" class="payload-toggle" id="payloadToggle" style="display:none" onclick="togglePayload()">Show the saved record (builders only)</button>
+      <pre class="payload" id="payloadView"></pre>
+    </div>
+  </div>
+
+  <div class="side-col">
+    <div class="live-map-panel">
+      <h3>Who's involved</h3>
+      <div class="live-map-sub">Committed people are closest to the center, then consulted, then met. A hollow dot means that person hasn't confirmed yet.</div>
+      <div class="live-map-wrap">
+        <svg id="liveMapSvg" aria-label="Map of the people involved in this project"></svg>
+        <div class="live-map-empty" id="liveMapEmpty">Enter a name in step 1 and add people in step 3 to see them here.</div>
+      </div>
+      <div class="live-map-legend" id="liveMapLegend"></div>
+      <div class="readout" id="readout"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const DATA = {"pretend":true,"taxonomy":[{"key":"relationships","label":"Community Relationships and Trust","blurb":"Connections to the people and groups who make up the community.","items":["Neighborhood association and resident group connections","Faith community connections","Youth and student engagement","Immigrant and newcomer community relationships","Elder and senior networks","Cultural and arts community relationships","Mutual aid and volunteer networks","Rural and agricultural community ties","Disability community relationships","Tribal and Indigenous community relationships"]},{"key":"economy","label":"Local Economy and Livelihoods","blurb":"Capacity to help people earn, build, and keep wealth locally.","items":["Small business coaching and support","Workforce development and job training","Cooperative and employee ownership experience","Local food systems and farm to market connections","Main street and commercial district revitalization","Entrepreneurship and startup mentoring","Financial coaching and household stability programs","Local hiring and procurement relationships","Creative economy and maker networks"]},{"key":"place","label":"Land, Space and Physical Assets","blurb":"Places, equipment, and infrastructure the community can use.","items":["Meeting and event space","Commercial kitchen or food processing space","Community land trust or shared ownership experience","Affordable housing development experience","Community gardens and growing space","Tools, equipment, or vehicle lending","Broadband and technology access points","Childcare or family friendly facilities"]},{"key":"capital","label":"Money and Capital","blurb":"Ways to bring resources into community work and move them around.","items":["Grant writing and fundraising capacity","Relationships with funders and philanthropy","Community lending and CDFI relationships","Fiscal sponsorship capacity","Participatory budgeting or community grantmaking experience","Crowdfunding and giving campaign experience","Public funding and government contract experience"]},{"key":"skills","label":"Skills and Organizational Capacity","blurb":"Expertise and infrastructure a person or organization can lend.","items":["Data, research, and mapping capacity","Training and facilitation capacity","Communications and storytelling capacity","Multilingual and in language capacity","Legal and regulatory expertise","Technology and digital tools support","Evaluation and learning capacity","Event and convening logistics","Volunteer coordination infrastructure"]}],"nodes":[{"id":"p00","name":"Millbrook Growers Cooperative","kind":"org","org_type":"Cooperative","town":"Millbrook","email":"millbrook.growers.cooper@example.org","phone":"(555) 010-0100","assets":["Local food systems and farm to market connections","Cooperative and employee ownership experience","Rural and agricultural community ties"],"needs":["Looking for help setting up online sales and delivery logistics for our farm boxes."],"offers":[],"grantee":true,"degree":4,"betweenness":0.0329,"cluster":4,"bridge":false,"engaging":0.5},{"id":"p01","name":"Alder County Food Pantry Network","kind":"org","org_type":"Nonprofit","town":"Millbrook","email":"alder.county.food.pantry@example.org","phone":"(555) 010-0101","assets":["Mutual aid and volunteer networks","Volunteer coordination infrastructure","Local food systems and farm to market connections"],"needs":["We need refrigerated storage space or a partner with cold chain capacity."],"offers":[],"grantee":false,"degree":5,"betweenness":0.1108,"cluster":2,"bridge":true,"engaging":0.4},{"id":"p02","name":"Harvest Table Community Kitchen","kind":"org","org_type":"Nonprofit","town":"Harper's Bend","email":"harvest.table.community@example.org","phone":"(555) 010-0102","assets":["Commercial kitchen or food processing space","Workforce development and job training"],"needs":["Seeking a grant writer to help us apply for a state workforce training grant."],"offers":[],"grantee":true,"degree":4,"betweenness":0.039,"cluster":4,"bridge":false,"engaging":0.75},{"id":"p03","name":"Rosa Delgado","kind":"person","org_type":"Farmer and market organizer","town":"Millbrook","email":"rosa.delgado@example.org","phone":"(555) 010-0103","assets":["Local food systems and farm to market connections","Immigrant and newcomer community relationships","Multilingual and in language capacity"],"needs":["I want a partner to help start a Spanish language business workshop series for farm families."],"offers":[],"grantee":false,"degree":4,"betweenness":0.0295,"cluster":3,"bridge":false,"engaging":0.25},{"id":"p04","name":"Sam Whitfield","kind":"person","org_type":"Rancher","town":"Harper's Bend","email":"sam.whitfield@example.org","phone":"(555) 010-0104","assets":["Rural and agricultural community ties","Tools, equipment, or vehicle lending"],"needs":["Need help understanding conservation easements and land succession planning."],"offers":["My flatbed trailer is available for borrowing most weekends. Just bring it back with the straps."],"grantee":false,"degree":5,"betweenness":0.07,"cluster":4,"bridge":true,"engaging":0.6},{"id":"p05","name":"Cedar Flats Community Garden Alliance","kind":"org","org_type":"Volunteer group","town":"Cedar Flats","email":"cedar.flats.community.ga@example.org","phone":"(555) 010-0105","assets":["Community gardens and growing space","Mutual aid and volunteer networks"],"needs":["Our tool shed burned down. Looking for tool donations or a lending partnership."],"offers":[],"grantee":true,"degree":2,"betweenness":0.007,"cluster":2,"bridge":false,"engaging":1.0},{"id":"p06","name":"Marta Kovacs","kind":"person","org_type":"Extension educator","town":"Millbrook","email":"marta.kovacs@example.org","phone":"(555) 010-0106","assets":["Training and facilitation capacity","Rural and agricultural community ties","Data, research, and mapping capacity"],"needs":["Looking for community partners to co-host food preservation classes."],"offers":["Happy to co-teach food preservation classes with any community group. I bring the canning equipment."],"grantee":false,"degree":5,"betweenness":0.0573,"cluster":4,"bridge":false,"engaging":0.6},{"id":"p07","name":"Riverbend Farm to School Project","kind":"org","org_type":"Nonprofit","town":"Millbrook","email":"riverbend.farm.to.school@example.org","phone":"(555) 010-0107","assets":["Youth and student engagement","Local food systems and farm to market connections"],"needs":["We need a van or shared transportation for weekly school deliveries."],"offers":[],"grantee":true,"degree":4,"betweenness":0.0092,"cluster":4,"bridge":false,"engaging":0.75},{"id":"p08","name":"Alderton Main Street Partnership","kind":"org","org_type":"Business association","town":"Alderton","email":"alderton.main.street.par@example.org","phone":"(555) 010-0108","assets":["Main street and commercial district revitalization","Local hiring and procurement relationships","Event and convening logistics"],"needs":["Seeking artists and makers to fill three vacant storefronts with pop up shops."],"offers":[],"grantee":true,"degree":3,"betweenness":0.0374,"cluster":0,"bridge":false,"engaging":0.67},{"id":"p09","name":"Alder County Small Business Center","kind":"org","org_type":"Public agency","town":"Alderton","email":"alder.county.small.busin@example.org","phone":"(555) 010-0109","assets":["Small business coaching and support","Entrepreneurship and startup mentoring","Financial coaching and household stability programs"],"needs":["We want to reach immigrant entrepreneurs and need trusted community messengers."],"offers":[],"grantee":false,"degree":5,"betweenness":0.0296,"cluster":0,"bridge":false,"engaging":0.8},{"id":"p10","name":"Denise Okafor","kind":"person","org_type":"Bakery owner","town":"Alderton","email":"denise.okafor@example.org","phone":"(555) 010-0110","assets":["Entrepreneurship and startup mentoring","Creative economy and maker networks"],"needs":["Looking for commercial kitchen space to expand wholesale production."],"offers":[],"grantee":false,"degree":4,"betweenness":0.0334,"cluster":0,"bridge":false,"engaging":0.75},{"id":"p11","name":"Ray Calloway","kind":"person","org_type":"Barber and community connector","town":"Alderton","email":"ray.calloway@example.org","phone":"(555) 010-0111","assets":["Neighborhood association and resident group connections","Youth and student engagement"],"needs":["Want help starting a youth apprenticeship program in the trades."],"offers":[],"grantee":false,"degree":5,"betweenness":0.057,"cluster":0,"bridge":false,"engaging":0.6},{"id":"p12","name":"Makers of Alder County","kind":"org","org_type":"Volunteer group","town":"Alderton","email":"makers.of.alder.county@example.org","phone":"(555) 010-0112","assets":["Creative economy and maker networks","Tools, equipment, or vehicle lending"],"needs":["Seeking a permanent shared workshop space with room for classes."],"offers":["Tool lending for members: ladders, saws, a cement mixer, and a very loved pickup truck."],"grantee":false,"degree":3,"betweenness":0.0083,"cluster":0,"bridge":false,"engaging":1.0},{"id":"p13","name":"Priya Raman","kind":"person","org_type":"Accountant","town":"Alderton","email":"priya.raman@example.org","phone":"(555) 010-0113","assets":["Financial coaching and household stability programs","Small business coaching and support"],"needs":["I can volunteer four hours a month and want to be matched with new business owners."],"offers":["I can give four hours a month of free bookkeeping help to a new business owner. First come, first served."],"grantee":false,"degree":2,"betweenness":0.0053,"cluster":0,"bridge":false,"engaging":1.0},{"id":"p14","name":"Harper's Bend Chamber of Commerce","kind":"org","org_type":"Business association","town":"Harper's Bend","email":"harpers.bend.chamber.of@example.org","phone":"(555) 010-0114","assets":["Local hiring and procurement relationships","Event and convening logistics"],"needs":["Our downtown lacks broadband. Looking for partners on a connectivity grant."],"offers":[],"grantee":false,"degree":5,"betweenness":0.0674,"cluster":0,"bridge":false,"engaging":0.6},{"id":"p15","name":"Tom Nguyen","kind":"person","org_type":"Restaurant owner","town":"Alderton","email":"tom.nguyen@example.org","phone":"(555) 010-0115","assets":["Local food systems and farm to market connections","Immigrant and newcomer community relationships"],"needs":["Want to source more from local farms but need help with ordering logistics."],"offers":[],"grantee":false,"degree":6,"betweenness":0.0566,"cluster":0,"bridge":false,"engaging":0.67},{"id":"p16","name":"Alder County Housing Trust","kind":"org","org_type":"Nonprofit","town":"Alderton","email":"alder.county.housing.tru@example.org","phone":"(555) 010-0116","assets":["Affordable housing development experience","Community land trust or shared ownership experience","Public funding and government contract experience"],"needs":["Seeking resident leaders to serve on our community advisory board."],"offers":[],"grantee":true,"degree":4,"betweenness":0.0469,"cluster":1,"bridge":false,"engaging":0.75},{"id":"p17","name":"Cedar Flats Tenants Union","kind":"org","org_type":"Volunteer group","town":"Cedar Flats","email":"cedar.flats.tenants.unio@example.org","phone":"(555) 010-0117","assets":["Neighborhood association and resident group connections","Mutual aid and volunteer networks"],"needs":["We need legal expertise on tenant protections and a place to hold meetings."],"offers":[],"grantee":false,"degree":5,"betweenness":0.0349,"cluster":1,"bridge":false,"engaging":0.8},{"id":"p18","name":"Gloria Standing Bear","kind":"person","org_type":"Housing advocate","town":"Cedar Flats","email":"gloria.standing.bear@example.org","phone":"(555) 010-0118","assets":["Tribal and Indigenous community relationships","Affordable housing development experience"],"needs":["Looking for data help to document overcrowding for a county housing report."],"offers":[],"grantee":false,"degree":4,"betweenness":0.0229,"cluster":1,"bridge":false,"engaging":0.75},{"id":"p19","name":"Alderton Habitat Chapter","kind":"org","org_type":"Nonprofit","town":"Alderton","email":"alderton.habitat.chapter@example.org","phone":"(555) 010-0119","assets":["Volunteer coordination infrastructure","Affordable housing development experience"],"needs":["Need skilled trades volunteers for two spring builds."],"offers":[],"grantee":false,"degree":2,"betweenness":0.0033,"cluster":1,"bridge":false,"engaging":0.5},{"id":"p20","name":"Frank Osei","kind":"person","org_type":"Retired planner","town":"Alderton","email":"frank.osei@example.org","phone":"(555) 010-0120","assets":["Legal and regulatory expertise","Data, research, and mapping capacity"],"needs":["Happy to advise groups on zoning and permits. Looking for groups who need it."],"offers":["Retired planner offering free advice on zoning, permits, and site plans. Coffee on you."],"grantee":false,"degree":4,"betweenness":0.012,"cluster":1,"bridge":false,"engaging":0.75},{"id":"p21","name":"Cedar Flats Community Land Trust","kind":"org","org_type":"Nonprofit","town":"Cedar Flats","email":"cedar.flats.community.la@example.org","phone":"(555) 010-0121","assets":["Community land trust or shared ownership experience","Community gardens and growing space"],"needs":["Seeking a fiscal sponsor while our nonprofit status is pending."],"offers":[],"grantee":false,"degree":3,"betweenness":0.0328,"cluster":1,"bridge":false,"engaging":0.67},{"id":"p22","name":"Janet Morrow","kind":"person","org_type":"Realtor","town":"Cedar Flats","email":"janet.morrow@example.org","phone":"(555) 010-0122","assets":["Relationships with funders and philanthropy","Main street and commercial district revitalization"],"needs":["Want to organize a landlord roundtable on accepting housing vouchers."],"offers":[],"grantee":false,"degree":4,"betweenness":0.018,"cluster":1,"bridge":false,"engaging":1.0},{"id":"p23","name":"Alder Interfaith Housing Coalition","kind":"org","org_type":"Faith coalition","town":"Alderton","email":"alder.interfaith.housing@example.org","phone":"(555) 010-0123","assets":["Faith community connections","Meeting and event space","Mutual aid and volunteer networks"],"needs":["Our congregations can host but we need a coordinator for a rotating shelter program."],"offers":["Our fellowship hall seats 120 and is free for community meetings on weeknights."],"grantee":false,"degree":3,"betweenness":0.0349,"cluster":1,"bridge":false,"engaging":0.67},{"id":"p24","name":"Cedar Flats Youth Collective","kind":"org","org_type":"Nonprofit","town":"Cedar Flats","email":"cedar.flats.youth.collec@example.org","phone":"(555) 010-0124","assets":["Youth and student engagement","Cultural and arts community relationships"],"needs":["Looking for paid internship placements with local employers for ten teens."],"offers":[],"grantee":true,"degree":7,"betweenness":0.136,"cluster":3,"bridge":true,"engaging":0.57},{"id":"p25","name":"Alder County Library Friends","kind":"org","org_type":"Volunteer group","town":"Alderton","email":"alder.county.library.fri@example.org","phone":"(555) 010-0125","assets":["Meeting and event space","Broadband and technology access points","Technology and digital tools support"],"needs":["Seeking volunteers to teach digital skills classes for seniors."],"offers":["Free meeting room at the library, evenings and Saturdays. Projector included. Book a slot with us."],"grantee":false,"degree":3,"betweenness":0.0271,"cluster":3,"bridge":false,"engaging":0.67},{"id":"p26","name":"Miguel Santos","kind":"person","org_type":"Muralist and teaching artist","town":"Cedar Flats","email":"miguel.santos@example.org","phone":"(555) 010-0126","assets":["Cultural and arts community relationships","Youth and student engagement","Creative economy and maker networks"],"needs":["Looking for wall space and sponsors for a youth mural apprenticeship."],"offers":[],"grantee":false,"degree":4,"betweenness":0.036,"cluster":0,"bridge":false,"engaging":0.5},{"id":"p27","name":"Alderton Adult Learning Center","kind":"org","org_type":"Nonprofit","town":"Alderton","email":"alderton.adult.learning@example.org","phone":"(555) 010-0127","assets":["Workforce development and job training","Multilingual and in language capacity","Training and facilitation capacity"],"needs":["We need employer partners willing to interview our program graduates."],"offers":[],"grantee":true,"degree":5,"betweenness":0.0396,"cluster":3,"bridge":false,"engaging":0.6},{"id":"p28","name":"Aisha Bell","kind":"person","org_type":"School counselor","town":"Cedar Flats","email":"aisha.bell@example.org","phone":"(555) 010-0128","assets":["Youth and student engagement","Elder and senior networks"],"needs":["Want to start an intergenerational mentoring program and need elder volunteers."],"offers":[],"grantee":false,"degree":3,"betweenness":0.0111,"cluster":3,"bridge":false,"engaging":1.0},{"id":"p29","name":"Harper's Bend Historical Society","kind":"org","org_type":"Nonprofit","town":"Harper's Bend","email":"harpers.bend.historical@example.org","phone":"(555) 010-0129","assets":["Cultural and arts community relationships","Meeting and event space","Elder and senior networks"],"needs":["Seeking help digitizing our oral history collection."],"offers":[],"grantee":true,"degree":5,"betweenness":0.0234,"cluster":3,"bridge":false,"engaging":0.8},{"id":"p30","name":"Jordan Pike","kind":"person","org_type":"Radio host","town":"Harper's Bend","email":"jordan.pike@example.org","phone":"(555) 010-0130","assets":["Communications and storytelling capacity","Elder and senior networks"],"needs":["Looking for community stories to feature. Pitch me your project."],"offers":["Free radio airtime for community announcements every Thursday morning. Call me with yours."],"grantee":false,"degree":4,"betweenness":0.0587,"cluster":4,"bridge":false,"engaging":0.25},{"id":"p31","name":"Somali Community Association of Alder County","kind":"org","org_type":"Nonprofit","town":"Alderton","email":"somali.community.associa@example.org","phone":"(555) 010-0131","assets":["Immigrant and newcomer community relationships","Multilingual and in language capacity","Mutual aid and volunteer networks"],"needs":["We want a partner to co-design a culturally rooted childcare cooperative."],"offers":[],"grantee":true,"degree":4,"betweenness":0.0205,"cluster":3,"bridge":false,"engaging":1.0},{"id":"p32","name":"Alder Community Foundation","kind":"org","org_type":"Funder","town":"Alderton","email":"alder.community.foundati@example.org","phone":"(555) 010-0132","assets":["Relationships with funders and philanthropy","Participatory budgeting or community grantmaking experience","Grant writing and fundraising capacity"],"needs":["Looking for resident reviewers for our new community grants committee."],"offers":[],"grantee":false,"degree":7,"betweenness":0.1968,"cluster":2,"bridge":true,"engaging":0.43},{"id":"p33","name":"Alder County Economic Development Office","kind":"org","org_type":"Public agency","town":"Alderton","email":"alder.county.economic.de@example.org","phone":"(555) 010-0133","assets":["Public funding and government contract experience","Data, research, and mapping capacity","Local hiring and procurement relationships"],"needs":["Seeking community input sites for our five year economic strategy."],"offers":[],"grantee":false,"degree":4,"betweenness":0.0435,"cluster":2,"bridge":false,"engaging":0.75},{"id":"p34","name":"Cascade Community Credit Union","kind":"org","org_type":"CDFI","town":"Alderton","email":"cascade.community.credit@example.org","phone":"(555) 010-0134","assets":["Community lending and CDFI relationships","Financial coaching and household stability programs"],"needs":["We want community partners to host lending circles in three towns."],"offers":[],"grantee":false,"degree":5,"betweenness":0.0757,"cluster":2,"bridge":true,"engaging":0.6},{"id":"p35","name":"Helen Zhao","kind":"person","org_type":"Grant consultant","town":"Cedar Flats","email":"helen.zhao@example.org","phone":"(555) 010-0135","assets":["Grant writing and fundraising capacity","Evaluation and learning capacity"],"needs":["Offering two pro bono grant applications this year for small groups."],"offers":["Offering two free grant applications this year for small groups without a grant writer. Come talk to me."],"grantee":false,"degree":4,"betweenness":0.0775,"cluster":4,"bridge":true,"engaging":0.25},{"id":"p36","name":"Alder Rural Capacity Partners","kind":"org","org_type":"Nonprofit","town":"Millbrook","email":"alder.rural.capacity.par@example.org","phone":"(555) 010-0136","assets":["Training and facilitation capacity","Evaluation and learning capacity","Fiscal sponsorship capacity"],"needs":["Looking for groups that need fiscal sponsorship or board training."],"offers":[],"grantee":false,"degree":4,"betweenness":0.0325,"cluster":2,"bridge":false,"engaging":0.75},{"id":"p37","name":"Dave Lindqvist","kind":"person","org_type":"County commissioner","town":"Harper's Bend","email":"dave.lindqvist@example.org","phone":"(555) 010-0137","assets":["Public funding and government contract experience","Rural and agricultural community ties"],"needs":["Want a community scorecard on broadband access to bring to the state."],"offers":[],"grantee":false,"degree":6,"betweenness":0.0951,"cluster":2,"bridge":true,"engaging":0.67},{"id":"p38","name":"United Way of Alder County","kind":"org","org_type":"Nonprofit","town":"Alderton","email":"united.way.of.alder.coun@example.org","phone":"(555) 010-0138","assets":["Volunteer coordination infrastructure","Relationships with funders and philanthropy","Communications and storytelling capacity"],"needs":["Recruiting workplace giving ambassadors at local employers."],"offers":[],"grantee":false,"degree":5,"betweenness":0.0695,"cluster":2,"bridge":true,"engaging":0.8},{"id":"p39","name":"Nina Petrov","kind":"person","org_type":"Data analyst and volunteer","town":"Alderton","email":"nina.petrov@example.org","phone":"(555) 010-0139","assets":["Data, research, and mapping capacity","Technology and digital tools support"],"needs":["I can build dashboards for community groups. Looking for a first project."],"offers":["I will build a free dashboard or map for one community group this fall. Looking for my first project."],"grantee":false,"degree":3,"betweenness":0.0429,"cluster":3,"bridge":false,"engaging":0.33}],"links":[{"source":"p02","target":"p06","cross_cluster":false,"kind":"existing"},{"source":"p16","target":"p17","cross_cluster":false,"kind":"existing"},{"source":"p35","target":"p37","cross_cluster":true,"kind":"existing"},{"source":"p19","target":"p38","cross_cluster":true,"kind":"existing"},{"source":"p02","target":"p04","cross_cluster":false,"kind":"existing"},{"source":"p25","target":"p39","cross_cluster":false,"kind":"existing"},{"source":"p16","target":"p20","cross_cluster":false,"kind":"existing"},{"source":"p27","target":"p31","cross_cluster":false,"kind":"existing"},{"source":"p10","target":"p14","cross_cluster":false,"kind":"existing"},{"source":"p32","target":"p39","cross_cluster":true,"kind":"existing"},{"source":"p17","target":"p19","cross_cluster":false,"kind":"existing"},{"source":"p18","target":"p39","cross_cluster":true,"kind":"existing"},{"source":"p08","target":"p32","cross_cluster":true,"kind":"existing"},{"source":"p01","target":"p04","cross_cluster":true,"kind":"existing"},{"source":"p09","target":"p14","cross_cluster":false,"kind":"existing"},{"source":"p21","target":"p35","cross_cluster":true,"kind":"existing"},{"source":"p28","target":"p29","cross_cluster":false,"kind":"existing"},{"source":"p16","target":"p22","cross_cluster":false,"kind":"existing"},{"source":"p05","target":"p36","cross_cluster":false,"kind":"existing"},{"source":"p24","target":"p32","cross_cluster":true,"kind":"existing"},{"source":"p09","target":"p12","cross_cluster":false,"kind":"existing"},{"source":"p03","target":"p04","cross_cluster":true,"kind":"existing"},{"source":"p08","target":"p26","cross_cluster":false,"kind":"existing"},{"source":"p16","target":"p32","cross_cluster":true,"kind":"existing"},{"source":"p00","target":"p15","cross_cluster":true,"kind":"existing"},{"source":"p12","target":"p15","cross_cluster":false,"kind":"existing"},{"source":"p24","target":"p29","cross_cluster":false,"kind":"existing"},{"source":"p01","target":"p23","cross_cluster":true,"kind":"existing"},{"source":"p17","target":"p36","cross_cluster":true,"kind":"existing"},{"source":"p34","target":"p37","cross_cluster":false,"kind":"existing"},{"source":"p32","target":"p34","cross_cluster":false,"kind":"existing"},{"source":"p04","target":"p30","cross_cluster":false,"kind":"existing"},{"source":"p01","target":"p06","cross_cluster":true,"kind":"existing"},{"source":"p11","target":"p15","cross_cluster":false,"kind":"existing"},{"source":"p33","target":"p37","cross_cluster":false,"kind":"existing"},{"source":"p06","target":"p07","cross_cluster":false,"kind":"existing"},{"source":"p03","target":"p07","cross_cluster":true,"kind":"existing"},{"source":"p03","target":"p09","cross_cluster":true,"kind":"existing"},{"source":"p25","target":"p28","cross_cluster":false,"kind":"existing"},{"source":"p32","target":"p38","cross_cluster":false,"kind":"existing"},{"source":"p11","target":"p24","cross_cluster":true,"kind":"existing"},{"source":"p17","target":"p21","cross_cluster":false,"kind":"existing"},{"source":"p24","target":"p31","cross_cluster":false,"kind":"existing"},{"source":"p01","target":"p38","cross_cluster":false,"kind":"existing"},{"source":"p26","target":"p29","cross_cluster":true,"kind":"existing"},{"source":"p24","target":"p35","cross_cluster":true,"kind":"existing"},{"source":"p08","target":"p11","cross_cluster":false,"kind":"existing"},{"source":"p01","target":"p05","cross_cluster":false,"kind":"existing"},{"source":"p06","target":"p27","cross_cluster":true,"kind":"existing"},{"source":"p26","target":"p30","cross_cluster":true,"kind":"existing"},{"source":"p09","target":"p15","cross_cluster":false,"kind":"existing"},{"source":"p18","target":"p21","cross_cluster":false,"kind":"existing"},{"source":"p22","target":"p23","cross_cluster":false,"kind":"existing"},{"source":"p14","target":"p30","cross_cluster":true,"kind":"existing"},{"source":"p17","target":"p23","cross_cluster":false,"kind":"existing"},{"source":"p00","target":"p06","cross_cluster":false,"kind":"existing"},{"source":"p00","target":"p34","cross_cluster":true,"kind":"existing"},{"source":"p37","target":"p38","cross_cluster":false,"kind":"existing"},{"source":"p32","target":"p33","cross_cluster":false,"kind":"existing"},{"source":"p29","target":"p31","cross_cluster":false,"kind":"existing"},{"source":"p18","target":"p20","cross_cluster":false,"kind":"existing"},{"source":"p02","target":"p15","cross_cluster":true,"kind":"existing"},{"source":"p20","target":"p22","cross_cluster":false,"kind":"existing"},{"source":"p10","target":"p34","cross_cluster":true,"kind":"existing"},{"source":"p02","target":"p35","cross_cluster":false,"kind":"existing"},{"source":"p33","target":"p36","cross_cluster":false,"kind":"existing"},{"source":"p04","target":"p07","cross_cluster":false,"kind":"existing"},{"source":"p11","target":"p27","cross_cluster":true,"kind":"existing"},{"source":"p10","target":"p13","cross_cluster":false,"kind":"existing"},{"source":"p11","target":"p13","cross_cluster":false,"kind":"existing"},{"source":"p24","target":"p27","cross_cluster":false,"kind":"existing"},{"source":"p18","target":"p22","cross_cluster":false,"kind":"existing"},{"source":"p00","target":"p07","cross_cluster":false,"kind":"existing"},{"source":"p14","target":"p37","cross_cluster":true,"kind":"existing"},{"source":"p34","target":"p38","cross_cluster":false,"kind":"existing"},{"source":"p09","target":"p10","cross_cluster":false,"kind":"existing"},{"source":"p36","target":"p37","cross_cluster":false,"kind":"existing"},{"source":"p27","target":"p29","cross_cluster":false,"kind":"existing"},{"source":"p12","target":"p26","cross_cluster":false,"kind":"existing"},{"source":"p24","target":"p28","cross_cluster":false,"kind":"existing"},{"source":"p25","target":"p30","cross_cluster":true,"kind":"existing"},{"source":"p20","target":"p33","cross_cluster":true,"kind":"existing"},{"source":"p03","target":"p31","cross_cluster":false,"kind":"existing"},{"source":"p14","target":"p15","cross_cluster":false,"kind":"existing"}],"clusters":[{"id":0,"size":9,"top_cats":["economy","relationships"],"top_town":"Alderton"},{"id":1,"size":8,"top_cats":["place","relationships"],"top_town":"Cedar Flats"},{"id":2,"size":8,"top_cats":["capital","skills"],"top_town":"Alderton"},{"id":3,"size":8,"top_cats":["relationships","skills"],"top_town":"Alderton"},{"id":4,"size":7,"top_cats":["relationships","skills"],"top_town":"Harper's Bend"}],"commitments":[{"helper":"p15","helped":"p00","need":"Looking for help setting up online sales and delivery logistics for our farm boxes.","status":"active","date":"2026-07-02"},{"helper":"p35","helped":"p02","need":"Seeking a grant writer to help us apply for a state workforce training grant.","status":"done","date":"2026-06-18"},{"helper":"p32","helped":"p24","need":"Looking for paid internship placements with local employers for ten teens.","status":"active","date":"2026-07-20"},{"helper":"p38","helped":"p01","need":"We need refrigerated storage space or a partner with cold chain capacity.","status":"active","date":"2026-07-25"},{"helper":"p34","helped":"p10","need":"Looking for commercial kitchen space to expand wholesale production.","status":"done","date":"2026-06-30"}]};
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+// Assets can be a plain taxonomy label or {item, detail} once someone adds context.
+function assetText(a){ return (a && typeof a === "object") ? a.item : a; }
+
+const CATS = DATA.taxonomy.map(c => ({key:c.key, label:c.label, blurb:c.blurb}));
+const CAT_ACCENT = {relationships:"#0D9488", economy:"#B45309", place:"#2563EB", capital:"#E11D48", skills:"#9333EA"};
+// Same friendly names the bulletin board uses, so a category reads the same everywhere.
+const FRIENDLY_CAT = {relationships:"Neighbors and relationships", economy:"Local economy",
+  place:"Space and equipment", capital:"Money and grants", skills:"Skills and know-how"};
+const FRIENDLY_BLURB = {relationships:"People and groups you can reach, and who trust you.",
+  economy:"Jobs, local businesses, and ways people earn a living.", place:"Land, buildings, space, and equipment.",
+  capital:"Grants, loans, donations, and other money.", skills:"Know-how, training, and help running an organization."};
+const CAT_OF = {};
+DATA.taxonomy.forEach(c => c.items.forEach(i => CAT_OF[i] = c.key));
+const nodes = DATA.nodes;
+function byId(id){ return nodes.find(n => n.id === id); }
+const whoAmI = nodes[3] ? nodes[3].id : nodes[0].id;
+
+const STATUS_COLOR = {committed:"#0F6E56", consulted:"#B45309", met:"#9A9280"};
+const STATUS_LABEL = {committed:"Committed", consulted:"Consulted", met:"Met"};
+// How firmly someone is involved is drawn three ways at once: distance from the
+// project, line style, and line weight -- so it reads even without color.
+const STATUS_DIST = {committed:62, consulted:100, met:138};
+const STATUS_DASH = {committed:null, consulted:"6 4", met:"2 5"};
+const STATUS_WIDTH = {committed:2.8, consulted:2, met:1.4};
+const STATUS_OPACITY = {committed:.9, consulted:.75, met:.55};
+const BUDGET_OPTIONS = ["None yet", "Under $5,000", "$5,000 to $25,000", "Over $25,000", "Not sure"];
+
+// What's in the way. A "match" blocker is something the exchange itself might
+// supply, so the review suggests people. A "first" blocker has to be settled
+// before more people would help, so the review says so instead of pushing
+// introductions. This is the difference between what a project needs and what
+// it needs next.
+const BLOCKERS = [
+  {key:"decision",   label:"A decision or approval",           hint:"A permit, a vote, a yes from an agency or board", group:"first", short:"a decision or approval"},
+  {key:"authority",  label:"Someone who can say yes",          hint:"The person with the authority hasn't agreed yet", group:"first", short:"getting the right person to say yes"},
+  {key:"readiness",  label:"We're not ready yet",              hint:"We don't have enough people, time, or skills yet", group:"first", short:"getting your group ready"},
+  {key:"agreement",  label:"Agreement from the community",     hint:"Neighbors, partners, or local leaders haven't agreed yet", group:"first", short:"agreement from the community"},
+  {key:"technical",  label:"Whether it will work",             hint:"Open questions about the design, equipment, or how to do it", group:"first", short:"finding out whether it will work"},
+  {key:"timing",     label:"Timing",                           hint:"A season, a deadline, or something else has to come first", group:"first", short:"the right timing"},
+  {key:"site",       label:"A place",                          hint:"Land, a building, or space to do the work", group:"match", short:"a place to do the work", cats:["place"]},
+  {key:"money",      label:"Money",                            hint:"Funding for this next step", group:"match", short:"money", cats:["capital"]},
+  {key:"connection", label:"Someone we don't know yet",        hint:"A person or group we need to meet", group:"match", short:"a new contact", cats:null},
+  {key:"unsure",     label:"Not sure",                         hint:"Something is stopping it, but it's hard to say what", group:"unsure", short:"something not yet named"}
+];
+const BLOCKER = Object.fromEntries(BLOCKERS.map(b => [b.key, b]));
+const HOLDER_BLOCKERS = new Set(["decision","authority","agreement"]);
+const FIRST_MESSAGES = {
+  decision: "Your next step is a decision or approval, not a new contact. Until it's made, bringing in more people may not move this forward. A facilitator can help you work out who decides and how to get a yes.",
+  authority: "Your next step is getting the right person to say yes. That takes a conversation more than an introduction. A facilitator can help you plan how to reach them and what they'll need to hear.",
+  readiness: "Your next step is getting your own group ready: enough people, time, or skills. Adding partners now could add pressure before you can use the help. A facilitator can help you decide what to build first.",
+  agreement: "Your next step is getting agreement from the community. Bringing in outside partners before that can backfire. A facilitator can help you work out who needs to agree, and in what order to ask them.",
+  technical: "Your next step is finding out whether it will work. That may need an outside review before any new partners. A facilitator can help you find the right person to look at it.",
+  timing: "Your next step is waiting for the right time. New contacts can wait until then. A facilitator can help you plan what to have ready when it comes."
+};
+
+const FIRST_SHORT = {
+  decision: "Work out who decides and how to get a yes.",
+  authority: "Talk with the person who can say yes.",
+  readiness: "Get enough people, time, or skills in place before adding partners.",
+  agreement: "Get neighbors and local leaders to agree before bringing in outside partners.",
+  technical: "Get an outside review of whether it will work.",
+  timing: "Plan what to have ready when the time comes."
+};
+
+// ---------- Header changes with where you are ----------
+const HEADER_INTAKE = {
+  title: "Tell us what you're starting",
+  text: "About a dozen questions in four steps. You'll get a page for your project when you're done."
+};
+const HEADER_REVIEW = {
+  title: "Review your project",
+  text: "Take a look before submitting. You can go back and change anything."
+};
+function setHeader(h){
+  document.getElementById("headerTitle").textContent = h.title;
+  document.getElementById("headerText").textContent = h.text;
+}
+
+// ---------- Project state ----------
+let project = null;
+function freshProject(){
+  return {
+    name: "", description: "", categories: [], geography: "",
+    budgetRange: null, inKind: "", budgetPrivate: true,
+    needs: [], needsDetail: "",
+    people: [],           // {key, name, status, personId|null, confirmed}
+    biggestUnknown: "", needToBeTrue: "", blockers: [], holder: "",
+    submitted: false
+  };
+}
+
+const STEPS = ["project","resources","people","questions","review"];
+const STEP_LABELS = {project:"The project", resources:"Resources", people:"Who's involved", questions:"What's stopping it", review:"Review"};
+let currentStep = "project";
+
+function startSurvey(){
+  project = freshProject();
+  document.getElementById("introBlock").style.display = "none";
+  // Clear the inline "none" rather than hardcoding "grid" -- an inline style
+  // beats the stylesheet, which would override the phone layout.
+  document.getElementById("appShell").style.display = "";
+  buildProjectCatChips();
+  buildBudgetChips();
+  buildNeedCats();
+  buildBlockers();
+  renderConnectedList();
+  renderStepNav();
+  goStep("project");
+  updateLiveMap();
+}
+
+function renderStepNav(){
+  const nav = document.getElementById("stepNav");
+  nav.innerHTML = STEPS.map(s => {
+    const done = isStepDone(s);
+    const cur = s === currentStep;
+    return '<button type="button" class="'+(cur?'current':'')+(done&&!cur?' done':'')+'" onclick="goStep(\''+s+'\')">'+
+      '<span class="dot"></span>'+STEP_LABELS[s]+'</button>';
+  }).join("");
+}
+function isStepDone(s){
+  if(!project) return false;
+  if(s === "project") return !!project.name.trim();
+  if(s === "resources") return !!project.budgetRange || project.needs.length > 0;
+  if(s === "people") return project.people.length > 0;
+  if(s === "questions") return !!(project.biggestUnknown.trim() || project.needToBeTrue.trim() || project.blockers.length);
+  if(s === "review") return project.submitted;
+  return false;
+}
+function goStep(step){
+  if(currentStep === "people" && step !== "people"){
+    const typed = document.getElementById("personName").value.trim();
+    if(pendingPerson || typed){
+      const name = pendingPerson ? pendingPerson.name : typed;
+      if(typed && !pendingPerson) stagePerson(typed);
+      const warn = document.getElementById("peopleWarning");
+      warn.textContent = "Choose Committed, Consulted, or Met for " + name + ", or clear the name to skip them.";
+      warn.style.display = "block";
+      document.getElementById("statusPickWrap").scrollIntoView({behavior:"smooth", block:"center"});
+      return;
+    }
+  }
+  currentStep = step;
+  STEPS.forEach(s => { document.getElementById("step" + s.charAt(0).toUpperCase()+s.slice(1)).style.display = (s===step ? "block" : "none"); });
+  setHeader(step === "review" ? HEADER_REVIEW : HEADER_INTAKE);
+  if(step === "review") renderReview();
+  renderStepNav();
+  document.querySelector("header.app").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+// ---------- Step 1: project ----------
+function buildProjectCatChips(){
+  const wrap = document.getElementById("projCatChips");
+  wrap.innerHTML = CATS.map(c =>
+    '<span class="pick-chip" data-key="'+c.key+'" style="border-color:'+CAT_ACCENT[c.key]+'" onclick="toggleProjCat(\''+c.key+'\')">'+esc(FRIENDLY_CAT[c.key])+'</span>'
+  ).join("");
+}
+function toggleProjCat(key){
+  const i = project.categories.indexOf(key);
+  if(i === -1) project.categories.push(key); else project.categories.splice(i,1);
+  const chip = document.querySelector('.pick-chip[data-key="'+key+'"]');
+  chip.classList.toggle("on", project.categories.includes(key));
+  chip.style.background = project.categories.includes(key) ? CAT_ACCENT[key] : "";
+  onProjectChange();
+}
+function onProjectChange(){
+  project.name = document.getElementById("projName").value;
+  project.description = document.getElementById("projDesc").value;
+  project.geography = document.getElementById("projGeo").value;
+  updateLiveMap();
+  renderStepNav();
+}
+
+// ---------- Step 2: resources ----------
+function buildBudgetChips(){
+  const wrap = document.getElementById("budgetChips");
+  wrap.innerHTML = BUDGET_OPTIONS.map((opt, i) =>
+    '<span class="budget-chip" data-i="'+i+'" onclick="pickBudget('+i+')">'+esc(opt)+'</span>'
+  ).join("");
+}
+function pickBudget(i){
+  project.budgetRange = BUDGET_OPTIONS[i];
+  document.querySelectorAll(".budget-chip").forEach(c => c.classList.toggle("on", Number(c.dataset.i) === i));
+  onResourcesChange();
+}
+function buildNeedCats(){
+  const wrap = document.getElementById("needCats");
+  wrap.innerHTML = CATS.map(c =>
+    '<div class="need-cat" data-key="'+c.key+'" style="--cat:'+CAT_ACCENT[c.key]+'" role="checkbox" aria-checked="false" tabindex="0" '+
+    'onclick="toggleNeed(\''+c.key+'\')" onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();toggleNeed(\''+c.key+'\');}">'+
+    '<div class="nc-name"><span class="nc-box"></span>'+esc(FRIENDLY_CAT[c.key])+'</div>'+
+    '<div class="nc-blurb">'+esc(FRIENDLY_BLURB[c.key])+'</div></div>'
+  ).join("");
+}
+function toggleNeed(key){
+  const i = project.needs.indexOf(key);
+  if(i === -1) project.needs.push(key); else project.needs.splice(i,1);
+  const el = document.querySelector('.need-cat[data-key="'+key+'"]');
+  const on = project.needs.includes(key);
+  el.classList.toggle("on", on);
+  el.setAttribute("aria-checked", on ? "true" : "false");
+  onResourcesChange();
+}
+function onResourcesChange(){
+  project.inKind = document.getElementById("inKind").value;
+  project.budgetPrivate = document.getElementById("budgetPrivate").checked;
+  project.needsDetail = document.getElementById("needsDetail").value;
+  updateLiveMap();
+  renderStepNav();
+}
+
+// ---------- Step 3: who's around it ----------
+let pendingPerson = null;
+function filterPersonSuggestions(query){
+  const box = document.getElementById("personSuggestions");
+  const q = query.trim().toLowerCase();
+  if(!q){
+    hidePersonSuggestions();
+    if(pendingPerson){
+      pendingPerson = null;
+      document.getElementById("statusPickWrap").style.display = "none";
+    }
+    hidePeopleWarning();
+    return;
+  }
+  const already = new Set(project.people.map(p => p.personId).filter(Boolean));
+  const matches = nodes.filter(n => {
+    if(already.has(n.id) || n.id === whoAmI) return false;
+    // Match the start of any word, and let a multi-word search like "alder comm" work too.
+    const nm = n.name.toLowerCase();
+    return nm.startsWith(q) || nm.includes(" " + q);
+  }).slice(0, 8);
+  if(!matches.length){ hidePersonSuggestions(); return; }
+  box.innerHTML = matches.map(n =>
+    '<div class="suggest-item" onmousedown="event.preventDefault(); stageKnownPerson(\''+n.id+'\')">'+
+    '<span>'+esc(n.name)+'</span>'+(n.town ? '<span class="suggest-sub">'+esc(n.town)+'</span>' : '')+
+    '</div>'
+  ).join("");
+  box.style.display = "block";
+}
+function hidePersonSuggestions(){
+  const box = document.getElementById("personSuggestions");
+  if(!box) return;
+  box.style.display = "none";
+  box.innerHTML = "";
+}
+function stageKnownPerson(id){
+  const p = byId(id);
+  if(!p) return;
+  pendingPerson = { key: "p:"+id, name: p.name, personId: id };
+  document.getElementById("personName").value = p.name;
+  hidePersonSuggestions();
+  showStatusPick();
+}
+function stagePerson(typedName){
+  const name = typedName.trim();
+  if(!name) return;
+  const match = nodes.find(n => n.name.toLowerCase() === name.toLowerCase());
+  if(match){ stageKnownPerson(match.id); return; }
+  pendingPerson = { key: "u:" + Date.now(), name: name, personId: null };
+  hidePersonSuggestions();
+  showStatusPick();
+}
+function showStatusPick(){
+  document.getElementById("statusPickWrap").style.display = "block";
+  document.querySelectorAll(".status-btn").forEach(b => b.classList.remove("on"));
+  hidePeopleWarning();
+}
+function hidePeopleWarning(){
+  const warn = document.getElementById("peopleWarning");
+  if(warn) warn.style.display = "none";
+}
+function pickStatus(status){
+  if(!pendingPerson) return;
+  project.people.push({ key: pendingPerson.key, name: pendingPerson.name, personId: pendingPerson.personId, status, confirmed: false });
+  pendingPerson = null;
+  document.getElementById("personName").value = "";
+  document.getElementById("statusPickWrap").style.display = "none";
+  hidePeopleWarning();
+  renderConnectedList();
+  updateLiveMap();
+  renderStepNav();
+}
+function removePerson(key){
+  project.people = project.people.filter(p => p.key !== key);
+  renderConnectedList();
+  updateLiveMap();
+  renderStepNav();
+}
+// Demo only: in the real build the named person confirms from their own
+// account. This lets reviewers see what a confirmed tie looks like.
+function demoConfirm(key){
+  const p = project.people.find(x => x.key === key);
+  if(!p) return;
+  p.confirmed = !p.confirmed;
+  renderConnectedList();
+  updateLiveMap();
+}
+function renderConnectedList(){
+  const wrap = document.getElementById("connectedList");
+  if(!project.people.length){ wrap.innerHTML = '<div class="empty-note">Nobody added yet.</div>'; return; }
+  wrap.innerHTML = project.people.map(p => {
+    let confirm;
+    if(!p.personId) confirm = '<span class="confirm-tag">not on the exchange yet</span>';
+    else confirm = '<span class="confirm-tag'+(p.confirmed?' ok':'')+'">'+(p.confirmed ? 'confirmed' : 'not yet confirmed')+'</span>'+
+      '<button type="button" class="demo-confirm" onclick="demoConfirm(\''+p.key+'\')">'+(p.confirmed ? 'undo (demo)' : 'pretend they confirmed (demo)')+'</button>';
+    return '<div class="connected-row"><div><span class="nm">'+esc(p.name)+'</span></div>'+
+      '<div class="row-actions"><span class="status-tag '+p.status+'">'+STATUS_LABEL[p.status]+'</span>'+confirm+
+      '<button type="button" class="row-remove" onclick="removePerson(\''+p.key+'\')" aria-label="Remove '+esc(p.name)+'">\u00d7</button></div></div>';
+  }).join("");
+}
+
+// ---------- Step 4: what's in the way ----------
+function buildBlockers(){
+  const wrap = document.getElementById("blockerGrid");
+  wrap.innerHTML = BLOCKERS.map(b =>
+    '<div class="blocker" data-key="'+b.key+'" role="checkbox" aria-checked="false" tabindex="0" '+
+    'onclick="toggleBlocker(\''+b.key+'\')" onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();toggleBlocker(\''+b.key+'\');}">'+
+    '<div class="b-name">'+esc(b.label)+'</div><div class="b-hint">'+esc(b.hint)+'</div></div>'
+  ).join("");
+}
+function toggleBlocker(key){
+  const i = project.blockers.indexOf(key);
+  if(i === -1) project.blockers.push(key); else project.blockers.splice(i, 1);
+  // Keep them in the list's own order so messages always read the same way.
+  project.blockers.sort((a, b) => BLOCKERS.findIndex(x => x.key === a) - BLOCKERS.findIndex(x => x.key === b));
+  document.querySelectorAll(".blocker").forEach(el => {
+    const on = project.blockers.includes(el.dataset.key);
+    el.classList.toggle("on", on);
+    el.setAttribute("aria-checked", on ? "true" : "false");
+  });
+  document.getElementById("holderWrap").style.display = needsHolder() ? "block" : "none";
+  onQuestionsChange();
+}
+function needsHolder(){ return project.blockers.some(k => HOLDER_BLOCKERS.has(k)); }
+// Split what was chosen into the three kinds the review responds to.
+function blockerGroups(){
+  const bs = project.blockers.map(k => BLOCKER[k]);
+  return { all: bs, first: bs.filter(b => b.group === "first"), match: bs.filter(b => b.group === "match"),
+           unsure: bs.some(b => b.group === "unsure") };
+}
+function onQuestionsChange(){
+  project.biggestUnknown = document.getElementById("qUnknown").value;
+  project.needToBeTrue = document.getElementById("qNeedTrue").value;
+  project.holder = needsHolder() ? document.getElementById("qHolder").value : "";
+  updateLiveMap();
+  renderStepNav();
+}
+
+// ---------- Reading the project: shared by the live map and the review ----------
+function categoriesOf(personId){
+  const n = byId(personId);
+  if(!n) return new Set();
+  return new Set((n.assets || []).map(a => CAT_OF[assetText(a)]).filter(Boolean));
+}
+// Needed categories that nobody committed or consulted brings yet. "Met" doesn't
+// count -- crossing paths isn't the same as having that capacity on hand.
+function uncoveredNeeds(){
+  return project.needs.filter(cat => !project.people.some(p =>
+    p.personId && p.status !== "met" && categoriesOf(p.personId).has(cat)));
+}
+function plural(n, one, many){ return n + " " + (n === 1 ? one : many); }
+function readoutRows(){
+  const rows = [];
+  const people = project.people;
+  const c = people.filter(p => p.status === "committed").length;
+  const k = people.filter(p => p.status === "consulted").length;
+  const m = people.filter(p => p.status === "met").length;
+  if(people.length){
+    rows.push(["strong", "Committed", c ? plural(c, "person or group has", "people or groups have") + " committed." : "Nobody has committed yet."]);
+    if(k + m) rows.push(["tentative", "In talks", (k ? k + " consulted" : "") + (k && m ? " and " : "") + (m ? m + " met" : "") + ": still conversations, not commitments."]);
+    const onExchange = people.filter(p => p.personId);
+    if(onExchange.length){
+      const conf = onExchange.filter(p => p.confirmed).length;
+      rows.push(["confirmed", "Confirmed", conf + " of " + onExchange.length + " people on the exchange " + (conf === 1 ? "has" : "have") + " confirmed."]);
+    }
+  }
+  const missing = uncoveredNeeds();
+  if(project.needs.length && missing.length){
+    rows.push(["missing", "Missing", "Nobody committed or consulted brings " + listWords(missing.map(k => FRIENDLY_CAT[k].toLowerCase())) + " yet."]);
+  }
+  const g = blockerGroups();
+  if(g.first.length) rows.push(["premature", "Settle first", "Your next step depends on " + listWords(g.first.map(b => b.short), "and") + ". New contacts can wait until that's settled."]);
+  else if(g.match.length) rows.push(["next", "Next step", "Your next step needs " + listWords(g.match.map(b => b.short), "and") + ". The review page will suggest people and groups who could help."]);
+  else if(g.unsure) rows.push(["next", "Next step", "You're not sure what is stopping the next step. It's worth naming before adding more people."]);
+  return rows;
+}
+function listWords(arr, conj){
+  if(arr.length <= 1) return arr.join("");
+  return arr.slice(0, -1).join(", ") + " " + (conj || "or") + " " + arr[arr.length - 1];
+}
+
+// ---------- Live map ----------
+let liveMapSim = null;
+function updateLiveMap(){
+  const svgEl = document.getElementById("liveMapSvg");
+  const emptyEl = document.getElementById("liveMapEmpty");
+  const legendEl = document.getElementById("liveMapLegend");
+  const readout = document.getElementById("readout");
+  const hasProject = project && project.name.trim();
+  const people = project ? project.people : [];
+
+  if(!hasProject){
+    svgEl.style.display = "none"; legendEl.innerHTML = ""; readout.innerHTML = "";
+    emptyEl.style.display = "flex";
+    return;
+  }
+  emptyEl.style.display = "none";
+  svgEl.style.display = "block";
+
+  const nodesData = [{id:"proj", name: project.name, type:"project"}]
+    .concat(people.map(p => ({id:p.key, name:p.name, type:"person", status:p.status, confirmed:p.confirmed})));
+  const linksData = people.map(p => ({source:"proj", target:p.key, status:p.status}));
+
+  if(liveMapSim){ liveMapSim.stop(); liveMapSim = null; }
+  const wrap = svgEl.parentElement;
+  const W = wrap.clientWidth || 320, H = wrap.clientHeight || 280;
+  const svg = d3.select(svgEl).attr("viewBox", "0 0 "+W+" "+H);
+  svg.selectAll("*").remove();
+  const g = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.5,2.5]).on("zoom", e => g.attr("transform", e.transform)));
+
+  // Faint guide rings at each level of involvement, so distance reads as meaning.
+  ["committed","consulted","met"].forEach(s => {
+    g.append("circle").attr("cx", W/2).attr("cy", H/2).attr("r", STATUS_DIST[s])
+      .attr("fill","none").attr("stroke","#E0D5BC").attr("stroke-dasharray","2 4");
+  });
+
+  const nodeR = d => d.type === "project" ? 18 : 10;
+  const link = g.append("g").selectAll("line").data(linksData).join("line")
+    .attr("stroke", d => STATUS_COLOR[d.status]).attr("stroke-width", d => STATUS_WIDTH[d.status])
+    .attr("stroke-dasharray", d => STATUS_DASH[d.status]).attr("stroke-opacity", d => STATUS_OPACITY[d.status]);
+  const node = g.append("g").selectAll("g").data(nodesData).join("g");
+  node.append("circle").attr("r", d => nodeR(d)+8).attr("fill","transparent");
+  node.append("circle").attr("r", nodeR)
+    .attr("fill", d => d.type === "project" ? "#241F14" : (d.confirmed ? STATUS_COLOR[d.status] : "#FFFDF7"))
+    .attr("stroke", d => d.type === "project" ? "#FFFDF7" : STATUS_COLOR[d.status])
+    .attr("stroke-width", d => d.type === "project" ? 2 : 2.4)
+    .append("title").text(d => d.type === "project" ? d.name :
+      d.name + " \u00b7 " + STATUS_LABEL[d.status] + (d.confirmed ? " \u00b7 confirmed" : " \u00b7 not yet confirmed"));
+  node.append("text").text(d => d.type === "project" ? "\u2605" : "")
+    .attr("text-anchor","middle").attr("dy","4px").attr("font-size","11px").attr("fill","#fff");
+  node.filter(d => d.type === "person").append("text").attr("class","plabel")
+    .text(d => shortLabel(d.name)).attr("text-anchor","middle").attr("dy", d => nodeR(d) + 12)
+    .attr("font-size","10px").attr("fill","#3A3428");
+
+  const projN = nodesData[0]; projN.fx = W/2; projN.fy = H/2;
+  // Start everyone evenly around the project, then hold each on its own ring,
+  // so the picture reads as "how close" rather than wherever the layout drifted.
+  const ppl = nodesData.slice(1);
+  ppl.forEach((d, i) => {
+    const a = -Math.PI/2 + (2 * Math.PI * i) / Math.max(1, ppl.length);
+    d.x = W/2 + STATUS_DIST[d.status] * Math.cos(a);
+    d.y = H/2 + STATUS_DIST[d.status] * Math.sin(a);
+  });
+  liveMapSim = d3.forceSimulation(nodesData)
+    .force("link", d3.forceLink(linksData).id(d=>d.id).strength(0))
+    .force("radial", d3.forceRadial(d => d.type === "project" ? 0 : STATUS_DIST[d.status], W/2, H/2).strength(1))
+    .force("charge", d3.forceManyBody().strength(-40))
+    .force("collide", d3.forceCollide().radius(d=>nodeR(d)+14))
+    .on("tick", () => {
+      nodesData.forEach(d => { if(d.type !== "project"){ d.x = Math.max(14, Math.min(W-14, d.x)); d.y = Math.max(14, Math.min(H-22, d.y)); } });
+      link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+      node.attr("transform", d => "translate("+d.x+","+d.y+")");
+      // Keep each name on the outer side of its dot, off its own line.
+      node.select("text.plabel").attr("dy", d => d.y < H/2 - 4 ? -(nodeR(d) + 6) : nodeR(d) + 12);
+    });
+
+  legendEl.innerHTML =
+    legendLine("committed", "Committed") + legendLine("consulted", "Consulted") + legendLine("met", "Met") +
+    '<span class="lg"><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="#FFFDF7" stroke="#6E6553" stroke-width="2"/></svg>Not yet confirmed</span>';
+
+  const rows = readoutRows();
+  readout.innerHTML = rows.length
+    ? '<div class="readout-title">What this shows</div>' + rows.map(r =>
+        '<div class="ro-row"><span class="ro-k '+r[0]+'">'+esc(r[1])+'</span><span>'+esc(r[2])+'</span></div>').join("")
+    : '<div class="ro-empty">Add people in step 3 to see who has committed and who hasn\'t yet.</div>';
+}
+function legendLine(status, label){
+  return '<span class="lg"><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="'+STATUS_COLOR[status]+
+    '" stroke-width="'+STATUS_WIDTH[status]+'"'+(STATUS_DASH[status] ? ' stroke-dasharray="'+STATUS_DASH[status]+'"' : '')+'/></svg>'+label+'</span>';
+}
+function shortLabel(name){
+  const first = name.split(" ")[0];
+  return first.length > 14 ? first.slice(0, 13) + "\u2026" : first;
+}
+
+// ---------- Review ----------
+function renderReview(){
+  const wrap = document.getElementById("reviewSummary");
+  const blkLabels = project.blockers.map(k => esc(BLOCKER[k].label)).join("; ");
+  const rows = [
+    ["Name", esc(project.name), "project"],
+    ["What you're trying to do", esc(project.description), "project"],
+    ["Areas", project.categories.map(k => FRIENDLY_CAT[k]).filter(Boolean).map(esc).join(", "), "project"],
+    ["Towns or areas", esc(project.geography), "project"],
+    ["Money so far", project.budgetRange ? esc(project.budgetRange) + (project.budgetPrivate ? " (only facilitators can see this)" : " (members can see this)") : "", "resources"],
+    ["Help already promised", esc(project.inKind), "resources"],
+    ["Will need over time", project.needs.map(k => esc(FRIENDLY_CAT[k])).join(", ") + (project.needsDetail.trim() ? " \u2014 " + esc(project.needsDetail.trim()) : ""), "resources"],
+    ["Who's involved", project.people.map(p => esc(p.name)+" ("+STATUS_LABEL[p.status]+(p.personId ? (p.confirmed ? ", confirmed" : ", not yet confirmed") : ", not on the exchange yet")+")").join(", "), "people"],
+    ["Biggest unknown", esc(project.biggestUnknown), "questions"],
+    ["What would need to be true", esc(project.needToBeTrue), "questions"],
+    ["What's stopping the next step", blkLabels ? blkLabels + (project.holder.trim() ? ". Who needs to agree or decide: " + esc(project.holder.trim()) : "") : "", "questions"],
+  ];
+  wrap.innerHTML = rows.map(([k,v,step]) =>
+    '<div class="review-field"><div><div class="k">'+k+'</div><div class="v">'+(v || '<span style="color:var(--faint)">\u2014</span>')+'</div></div>'+
+    '<button type="button" class="edit-link" onclick="goStep(\''+step+'\')">Change</button></div>').join("");
+  renderNextPanel();
+  updateLiveMap();
+  document.getElementById("payloadView").textContent = JSON.stringify(buildSupabasePayload(), null, 2);
+  if(new URLSearchParams(location.search).has("debug")) document.getElementById("payloadToggle").style.display = "";
+}
+
+// Who on the exchange brings the categories this next step calls for. Skips
+// anyone already around the project and the person filling this out. With more
+// than one category, take turns between them so each need gets represented.
+function suggestFor(cats, limit){
+  limit = limit || 3;
+  const around = new Set(project.people.map(p => p.personId).filter(Boolean));
+  const pool = nodes.filter(n => n.id !== whoAmI && !around.has(n.id));
+  const rankFor = cat => pool.map(n => ({n, hits: (n.assets || []).map(assetText).filter(a => CAT_OF[a] === cat)}))
+    .filter(x => x.hits.length)
+    .sort((a,b) => (b.hits.length - a.hits.length) || ((b.n.degree||0) - (a.n.degree||0)));
+  const lists = cats.map(rankFor);
+  const out = [], seen = new Set();
+  for(let round = 0; out.length < limit && lists.some(l => l.length > round); round++){
+    lists.forEach(l => {
+      const x = l[round];
+      if(x && out.length < limit && !seen.has(x.n.id)){ seen.add(x.n.id); out.push(x); }
+    });
+  }
+  return out;
+}
+function renderNextPanel(){
+  const el = document.getElementById("nextPanel");
+  const g = blockerGroups();
+  const along = project.needs.length
+    ? '<p class="along">Over time, it will also need: '+esc(project.needs.map(k => FRIENDLY_CAT[k].toLowerCase()).join(", "))+'. The next step comes first.</p>'
+    : '';
+  if(!g.all.length){
+    el.innerHTML = '<div class="next-panel unsure"><h3>Not answered yet</h3><p>Go back to step 4 and pick what is stopping the next step. That decides whether new contacts would help now.</p>'+
+      '<button type="button" class="btn ghost" onclick="goStep(\'questions\')">Go to step 4</button>'+along+'</div>';
+    return;
+  }
+  const holderLine = project.holder.trim() ? '<p>Who needs to agree or decide: <b>'+esc(project.holder.trim())+'</b>.</p>' : '';
+  const unsureLine = g.unsure ? '<p>You also noted something that\'s hard to name yet. A facilitator can help with that too.</p>' : '';
+
+  // Anything that has to be settled comes first, even when the exchange could
+  // help with the rest. Those other needs are named but not acted on yet.
+  if(g.first.length){
+    const body = g.first.length === 1
+      ? '<p>'+esc(FIRST_MESSAGES[g.first[0].key])+'</p>'
+      : '<p>Your next step depends on more than one thing that has to be settled first:</p><ul class="settle-list">'+
+          g.first.map(b => '<li><b>'+esc(b.label)+'.</b> '+esc(FIRST_SHORT[b.key])+'</li>').join("")+
+        '</ul><p>A facilitator can help you work out which to take on first.</p>';
+    const later = g.match.length
+      ? '<p class="later">Once '+(g.first.length === 1 ? 'that\'s' : 'those are')+' settled, the exchange can suggest people for '+esc(listWords(g.match.map(b => b.short), "and"))+'.</p>'
+      : '';
+    el.innerHTML = '<div class="next-panel first"><h3>Settle '+(g.first.length === 1 ? 'this' : 'these')+' before adding new contacts</h3>'+
+      body + holderLine + unsureLine +
+      '<p style="color:var(--muted);font-size:12.5px;margin-bottom:0">That\'s why no people are suggested here yet.</p>'+
+      later + along + '</div>';
+    return;
+  }
+  if(!g.match.length){
+    el.innerHTML = '<div class="next-panel unsure"><h3>Name what\'s stopping it first</h3><p>You\'re not sure what is stopping the next step. A facilitator can help you figure that out before you look for more people or money.</p>'+along+'</div>';
+    return;
+  }
+
+  // Only things the exchange itself might supply. For a missing connection,
+  // start with what nobody around the project brings yet.
+  const missing = uncoveredNeeds();
+  const connectionCats = missing.length ? missing : (project.needs.length ? project.needs : project.categories);
+  const cats = [...new Set(g.match.flatMap(b => b.cats || connectionCats))];
+  const lacking = missing.length ? " (" + missing.map(k => FRIENDLY_CAT[k].toLowerCase()).join(", ") + ")" : "";
+  const INTRO = {
+    site: "Your next step is finding a place. These people and groups on the exchange have space or equipment they share:",
+    money: "Your next step is money. These people and groups on the exchange have experience with funding:",
+    connection: "Your next step is meeting someone you don't know yet. These people and groups on the exchange bring what this project is missing" + lacking + ":"
+  };
+  const HEADING = {site: "People who could help with a place", money: "People who could help with money", connection: "People you could meet"};
+  const one = g.match.length === 1 ? g.match[0] : null;
+  const heading = one ? HEADING[one.key] : "People who could help with the next step";
+  const intro = one ? INTRO[one.key]
+    : "Your next step needs " + listWords(g.match.map(b => b.short), "and") + ". These people and groups on the exchange could help:";
+  if(!cats.length){
+    el.innerHTML = '<div class="next-panel"><h3>'+esc(heading)+'</h3><p>Go back to step 2 and pick what this project will need, so the exchange can suggest people.</p>'+
+      '<button type="button" class="btn ghost" onclick="goStep(\'resources\')">Go to step 2</button>'+unsureLine+along+'</div>';
+    return;
+  }
+  const sugg = suggestFor(cats, one ? 3 : 4);
+  const list = sugg.length
+    ? sugg.map(s => '<div class="match-card"><span class="m-name">'+esc(s.n.name)+'</span> <span class="m-sub">'+esc(s.n.town||"")+'</span>'+
+        '<div class="m-why">Brings: '+esc(s.hits.slice(0,2).join("; "))+'</div></div>').join("")
+    : '<p style="color:var(--muted)">Nobody on the exchange lists that yet. A facilitator may know someone who isn\'t on it.</p>';
+  el.innerHTML = '<div class="next-panel"><h3>'+esc(heading)+'</h3><p>'+esc(intro)+'</p>'+list+
+    '<p style="color:var(--muted);font-size:12.5px;margin:8px 0 0">Suggestions only. Nobody is contacted from this page.</p>'+unsureLine+along+'</div>';
+}
+function buildSupabasePayload(){
+  const g = blockerGroups();
+  return {
+    table: "projects",
+    record: {
+      name: project.name, description: project.description, categories: project.categories,
+      geography: project.geography, budget_range: project.budgetRange,
+      budget_visibility: project.budgetPrivate ? "facilitator_only" : "members",
+      in_kind_resources: project.inKind,
+      needs_along_the_way: project.needs, needs_detail: project.needsDetail,
+      next_step: {
+        blockers: g.all.map(b => ({type: b.key, group: b.group})),
+        holder: project.holder || null,
+        biggest_unknown: project.biggestUnknown, would_need_to_be_true: project.needToBeTrue
+      },
+      created_by: whoAmI, created_at: new Date().toISOString()
+    },
+    related_table: "project_ties",
+    ties: project.people.map(p => ({
+      participant_id: p.personId, unlisted_name: p.personId ? null : p.name,
+      status: p.status, confirmed: false, added_at: new Date().toISOString()
+    }))
+  };
+}
+function togglePayload(){
+  const el = document.getElementById("payloadView");
+  el.style.display = el.style.display === "block" ? "none" : "block";
+}
+function submitProject(){
+  project.submitted = true;
+  document.getElementById("submitBtn").disabled = true;
+  document.getElementById("submitAfter").innerHTML =
+    '<div class="sync-badge"><span class="sd"></span>Demo only \u2014 nothing was saved</div>'+
+    '<p class="note">In the full version, this creates your project page, which only you and the facilitators can see. People you named who are on the exchange are asked to confirm.</p>';
+  renderStepNav();
+}
+
+setHeader(HEADER_INTAKE);
+</script>
+</body>
+</html>
